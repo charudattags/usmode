@@ -1,6 +1,7 @@
 "use client";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { paletteFromSeed } from "@/theme/materialYou";
 import { useRoom } from "@/state/RoomProvider";
 import { PageHeader, SettingsLink } from "../shell/TabShell";
 import { Icon, type IconName } from "../ui/Icon";
@@ -77,6 +78,14 @@ export function RoomsScreen() {
     else window.history.replaceState(null, "", url);
   }, []);
 
+  // Rooms with a night backdrop always use the dark M3 palette, whatever the system theme.
+  const seed = room.room?.theme_seed_hex ?? "#d0436e";
+  const variant = room.config.variant;
+  const darkVars = useMemo(
+    () => Object.fromEntries(Object.entries(paletteFromSeed(seed, true, variant)).map(([k, v]) => [`--md-sys-color-${k}`, v])) as CSSProperties,
+    [seed, variant],
+  );
+
   const counts: Record<RoomId, ReactNode> = {
     call: room.room?.cowork_started_at ? "Co-work running" : null,
     jam: room.spotify.track ? `♪ ${room.spotify.track.title}` : null,
@@ -123,7 +132,7 @@ export function RoomsScreen() {
             layoutId={`room-${open}`}
             transition={springs.soft}
             className="fixed inset-0 z-[45] overflow-y-auto"
-            style={{ background: ROOMS[open].backdrop, borderRadius: 0 }}
+            style={{ ...(ROOMS[open].dark ? darkVars : {}), background: ROOMS[open].backdrop, borderRadius: 0, colorScheme: ROOMS[open].dark ? "dark" : undefined }}
             role="dialog"
             aria-modal="true"
             aria-label={ROOMS[open].title}

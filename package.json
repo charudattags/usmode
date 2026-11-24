@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:sql": "vitest run -c vitest.sql.config.mts",
+    "test:e2e": "node tests/e2e/two-partners.mjs",
+    "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
     "@material/material-color-utilities": "^0.4.0",
@@ -38,5 +43,8 @@
     "tailwindcss": "4.3.3",
     "typescript": "^5",
     "vitest": "^5.1.1"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }
