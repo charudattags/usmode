@@ -39,12 +39,19 @@ function one<T>(res: { data: unknown; error: { message: string } | null }): T {
 
 export class SupabaseBackend implements Backend {
   readonly kind = "supabase" as const;
-  private sb: SupabaseClient;
+  private client: SupabaseClient | null = null;
 
-  constructor(url: string, anonKey: string) {
-    this.sb = createClient(url, anonKey, {
+  constructor(
+    private url: string,
+    private anonKey: string,
+  ) {}
+
+  /** Created on first use, so constructing the backend during SSR is harmless. */
+  private get sb(): SupabaseClient {
+    this.client ??= createClient(this.url, this.anonKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
     });
+    return this.client;
   }
 
   /* Session */

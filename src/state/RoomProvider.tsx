@@ -8,7 +8,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { aadFor, decryptJSON, decryptText, encryptJSON, encryptText, type Sealed } from "@/crypto/e2ee";
 import { loadRoomKey } from "@/crypto/keystore";
 import { friendlyError, type Backend } from "@/data/backend";
-import { currentMode, getBackend, type Mode } from "@/data";
+import { currentMode, getBackend, setMode, type Mode } from "@/data";
+import { setDemoIdentity } from "@/data/demo/backend";
 import { CHANGE_TABLES } from "@/data/tables";
 import type {
   BroadcastEvent,
@@ -33,10 +34,24 @@ import { advanceHandshake, type HandshakeState } from "./pairing";
 import { defaultConfig, sanitizeConfig, sanitizePayload, safeArtUrl, safeSpotifyUrl, type PostPayload, type RoomConfig, type TrackMeta } from "./config";
 import { useToast } from "./toast";
 
+/** "?as=A" / "?as=B" opens this tab as that demo partner (used by "Open Partner B window"). */
+function consumeDemoParam() {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  const as = url.searchParams.get("as");
+  if (as !== "A" && as !== "B") return;
+  setMode("demo");
+  setDemoIdentity(as);
+  url.searchParams.delete("as");
+  window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+}
+
 export type Phase = "booting" | "signed_out" | "no_room" | "pairing" | "ready" | "error";
 
 export interface TaskView extends TaskRow {
   title: string;
+  /** Same as is_completed, in the shape the scoring engine expects. */
+  isCompleted: boolean;
 }
 export interface PostView extends PostRow {
   payload: PostPayload;
@@ -159,7 +174,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
   const [bootId, setBootId] = useState(0);
   const [mode, setModeState] = useState<Mode>("live");
-  const [backend, setBackend] = useState<Backend | null>(null);
+  const [backend, setBackend] = useState<Backend>(() => getBackend());
   const [phase, setPhase] = useState<Phase>("booting");
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -176,6 +191,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   /* ------------------------------ boot ------------------------------- */
   useEffect(() => {
     let cancelled = false;
+    consumeDemoParam();
     const b = getBackend();
     setBackend(b);
     setModeState(currentMode());
@@ -193,9 +209,10 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (!rid) return setPhase("no_room");
         setRoomId(rid);
-        const k = await loadRoomKey(uid, rid);
+        const [k, r] = await Promise.all([loadRoomKey(uid, rid), b.fetchRoom(rid)]);
         if (cancelled) return;
-        if (k) {
+        // Ready only once the room is locked to two and this device holds the key.
+        if (k && r?.is_locked) {
           setKey(k);
           setPhase("ready");
         } else {
@@ -270,7 +287,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
             const [tasks, scores] = await Promise.all([b.fetchTasks(roomId, open.id), b.fetchScores(roomId, open.id)]);
             patch.scores = scores;
             patch.tasks = await Promise.all(
-              tasks.map(async (t) => ({ ...t, title: (k && (await tryText(k, { ct: t.encrypted_title, iv: t.iv }, aad.task(roomId, t.user_id)))) || "🔒 Couldn't decrypt" })),
+              tasks.map(async (t) => ({ ...t, isCompleted: t.is_completed, title: (k && (await tryText(k, { ct: t.encrypted_title, iv: t.iv }, aad.task(roomId, t.user_id)))) || "🔒 Couldn't decrypt" })),
             );
           }),
         );
@@ -595,8 +612,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const value: RoomCtx | null = backend
-    ? {
+  const value: RoomCtx = {
         ...data,
         backend,
         mode,
@@ -621,10 +637,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         run,
         broadcast,
         onBroadcast,
-      }
-    : null;
+      };
 
-  if (!value) return null;
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
