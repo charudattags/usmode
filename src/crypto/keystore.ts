@@ -89,13 +89,18 @@ export async function loadRoomKeyRaw(userId: string, roomId: string): Promise<Ui
   return decryptBytes(await vaultKey(userId), fromB64(rec.sealedRaw.ct), fromB64(rec.sealedRaw.iv), `vault|${roomId}`);
 }
 
-/** Pending pairing secrets for the room creator (code auth + QR secret). */
+/**
+ * Pairing secrets kept on the device until the handshake finishes, so a reload
+ * mid-pairing can resume. Creator keeps the code; joiner keeps what it typed.
+ */
 export interface PendingPairing {
+  role: "creator" | "joiner";
   roomId: string;
   code: string;
   auth: string; // base64
-  qrSecret: string;
-  expiresAt: string;
+  qrSecret: string | null;
+  method: "qr" | "code" | null;
+  expiresAt: string | null;
 }
 
 export async function savePendingPairing(userId: string, p: PendingPairing): Promise<void> {
