@@ -495,10 +495,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       // What I call my partner, and what my partner calls me.
       partner: (userId && data.config.petNames[userId]) || "Partner",
       me: (partner && data.config.petNames[partner.user_id]) || "You",
-      meAvatar: (userId && data.config.avatars[userId]) || "🦊",
-      partnerAvatar: (partner && data.config.avatars[partner.user_id]) || "🐻",
+      // Defaults: the room's creator is the fox, the partner who joined is the bear.
+      meAvatar: (userId && data.config.avatars[userId]) || (data.room?.created_by === userId ? "🦊" : "🐻"),
+      partnerAvatar: (partner && data.config.avatars[partner.user_id]) || (data.room?.created_by === partner?.user_id ? "🦊" : "🐻"),
     }),
-    [data.config, userId, partner],
+    [data.config, data.room?.created_by, userId, partner],
   );
   const cozyMode = Boolean(me && partner && Math.min(me.battery_level, partner.battery_level) <= 2);
 

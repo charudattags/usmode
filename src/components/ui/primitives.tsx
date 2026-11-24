@@ -162,14 +162,16 @@ export function Switch({ checked, onChange, label, description, disabled }: { ch
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative h-8 w-[52px] shrink-0 rounded-full border-2 transition-colors ${checked ? "border-primary bg-primary" : "border-outline bg-surface-container-highest"}`}
+        className={`relative flex h-8 w-[52px] shrink-0 items-center rounded-full border-2 px-[2px] transition-colors ${checked ? "border-primary bg-primary" : "border-outline bg-surface-container-highest"}`}
       >
         <motion.span
-          layout
+          initial={false}
+          animate={{ x: checked ? 20 : 4, width: checked ? 24 : 16, height: checked ? 24 : 16 }}
           transition={springs.nav}
-          className={`absolute top-1/2 -translate-y-1/2 rounded-full ${checked ? "right-1 h-6 w-6 bg-on-primary" : "left-1.5 h-4 w-4 bg-outline"}`}
+          className={`block rounded-full ${checked ? "bg-on-primary" : "bg-outline"}`}
         />
       </button>
     </label>

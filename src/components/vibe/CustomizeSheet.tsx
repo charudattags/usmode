@@ -30,12 +30,12 @@ export function CustomizeSheet({ open, onClose }: { open: boolean; onClose: () =
     setName(c.roomName);
     setMine(c.petNames[me] ?? "");
     setTheirs(partner ? (c.petNames[partner] ?? "") : "");
-    setAvatar(c.avatars[me] ?? "🦊");
+    setAvatar(c.avatars[me] ?? room.names.meAvatar);
     setPhone(c.phones[me] ?? "");
     setTime(room.room?.backchodi_start_time.slice(0, 5) ?? "21:00");
     setSeed(room.room?.theme_seed_hex ?? "#d0436e");
     setVariant(c.variant);
-  }, [open, room.config, room.room, me, partner]);
+  }, [open, room.config, room.room, room.names.meAvatar, me, partner]);
 
   // Live preview while picking a colour or style.
   useEffect(() => {
