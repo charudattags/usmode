@@ -32,16 +32,14 @@ export function SettingsScreen() {
   const [fp, setFp] = useState<{ me: string; them: string; safety: string } | null>(null);
   const [kitOpen, setKitOpen] = useState(false);
   const [lockOn, setLockOn] = useState(false);
-  const [notif, setNotif] = useState(false);
-  const [p, setP] = useState<Prefs>({ sound: true, haptics: true, reducedMotion: "system", theme: "system" });
+  const [notif, setNotif] = useState(notificationsAllowed);
+  const [p, setP] = useState<Prefs>(prefs);
 
   useEffect(() => {
     if (room.phase !== "ready" && room.phase !== "booting") router.replace("/");
   }, [room.phase, router]);
 
   useEffect(() => {
-    setP(prefs());
-    setNotif(notificationsAllowed());
     if (room.userId) void loadAppLockCredential(room.userId).then((c) => setLockOn(Boolean(c)));
   }, [room.userId]);
 
@@ -208,7 +206,7 @@ export function SettingsScreen() {
             onClick={async () => {
               if (!confirm("Wipe the local demo server and both partners' demo keys?")) return;
               await resetDemoServer();
-              location.href = "/";
+              window.location.replace(new URL("/", window.location.origin));
             }}
           >
             Reset demo
@@ -221,7 +219,7 @@ export function SettingsScreen() {
               if (!room.userId || !confirm("Forget this device's keys and sign out? Without a recovery kit you can't read the room on this device again.")) return;
               await forgetUser(room.userId);
               await room.backend.signOut();
-              location.href = "/";
+              window.location.replace(new URL("/", window.location.origin));
             }}
           >
             Forget keys on this device

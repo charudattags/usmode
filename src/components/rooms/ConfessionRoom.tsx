@@ -27,24 +27,20 @@ function markRevealSeen(id: string) {
 
 export function ConfessionRoom() {
   const room = useRoom();
-  const [mutual, setMutual] = useState(false);
+  const [mutualChoice, setMutual] = useState(false);
   const [ephemeral, setEphemeral] = useState(false);
   const openRound = room.rounds.find((r) => !r.revealed_at && !r.submitted_user_ids.includes(room.userId ?? "") && r.submitted_user_ids.length > 0);
   const myWaitingRound = room.rounds.find((r) => !r.revealed_at && r.submitted_user_ids.includes(room.userId ?? ""));
-  const [roundId, setRoundId] = useState<string | null>(null);
+  const [roundChoice, setRoundId] = useState<string | null>(null);
+  // Answering the partner's open round is always a mutual reveal into that round.
+  const mutual = mutualChoice || Boolean(openRound);
+  const roundId = openRound?.id ?? roundChoice;
 
   async function prepareRound(): Promise<string | null> {
     if (openRound) return openRound.id;
     const rr = await room.run(() => room.backend.startRevealRound(room.roomId!, room.userId!), ["reveal_rounds"]);
     return rr?.id ?? null;
   }
-
-  useEffect(() => {
-    if (openRound) {
-      setMutual(true);
-      setRoundId(openRound.id);
-    }
-  }, [openRound]);
 
   const posts = room.posts.confession;
   const revealedRounds = room.rounds.filter((r) => r.revealed_at);
@@ -99,12 +95,17 @@ export function ConfessionRoom() {
 }
 
 function RoundAwareComposer({ mutual, ephemeral, roundId, prepareRound, onPosted }: { mutual: boolean; ephemeral: boolean; roundId: string | null; prepareRound: () => Promise<string | null>; onPosted: () => void }) {
-  const [rid, setRid] = useState<string | null>(roundId);
-  useEffect(() => setRid(roundId), [roundId]);
-  // A mutual reveal needs a round before posting; create (or join) it when the toggle turns on.
+  const [created, setCreated] = useState<string | null>(null);
+  const rid = roundId ?? created;
+  // A mutual reveal needs a round before posting; create it when the toggle turns on.
   useEffect(() => {
-    if (mutual && !rid) void prepareRound().then(setRid);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!mutual || rid) return;
+    let alive = true;
+    void prepareRound().then((id) => alive && setCreated(id));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the toggle flips
   }, [mutual]);
   return (
     <Composer
@@ -117,7 +118,10 @@ function RoundAwareComposer({ mutual, ephemeral, roundId, prepareRound, onPosted
       tone="twilight"
       placeholder={mutual ? "Write yours. Neither of you sees until both are in…" : "Something you've been meaning to say…"}
       sendLabel={mutual ? "Seal it" : "Confess"}
-      onPosted={onPosted}
+      onPosted={() => {
+        setCreated(null);
+        onPosted();
+      }}
     />
   );
 }
@@ -161,7 +165,7 @@ function GlassShatter() {
             style={{ clipPath: i % 2 ? "polygon(0 0,100% 10%,85% 100%,5% 90%)" : "polygon(10% 0,100% 0,90% 95%,0 100%)" }}
             initial={{ opacity: 1, x: 0, y: 0, rotate: 0 }}
             animate={{ opacity: 0, x: cx * 60, y: cy * 60 + 120, rotate: cx * 30 }}
-            transition={{ delay: 0.3 + Math.random() * 0.3, duration: 0.9, ease: "easeIn" }}
+            transition={{ delay: 0.3 + ((i * 37) % 10) / 33, duration: 0.9, ease: "easeIn" }}
           />
         );
       })}

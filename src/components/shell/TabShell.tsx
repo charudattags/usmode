@@ -36,7 +36,8 @@ export function TabShell({ children }: { children: ReactNode }) {
     try {
       if (!localStorage.getItem(k)) {
         localStorage.setItem(k, "1");
-        setKitOpen(true);
+        const t = setTimeout(() => setKitOpen(true), 700);
+        return () => clearTimeout(t);
       }
     } catch {
       /* storage blocked: skip the prompt */

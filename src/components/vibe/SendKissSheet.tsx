@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { KissStyle } from "@/data/types";
 import { aad, useRoom } from "@/state/RoomProvider";
 import { useFx } from "../animations/FxProvider";
@@ -12,12 +12,9 @@ export function SendKissSheet({ open, onClose }: { open: boolean; onClose: () =>
   const fx = useFx();
   const [style, setStyle] = useState<KissStyle>("smooch");
   const [note, setNote] = useState("");
-  const [taskId, setTaskId] = useState<string | null>(null);
+  // Remounted (via key) each time it opens; defaults to the oldest owed kiss.
+  const [taskId, setTaskId] = useState<string | null>(() => room.owed[0]?.task_id ?? null);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (open) setTaskId(room.owed[0]?.task_id ?? null);
-  }, [open, room.owed]);
 
   async function send() {
     if (!room.partner || !room.roomId || !room.userId) return;

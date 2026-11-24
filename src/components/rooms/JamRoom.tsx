@@ -15,13 +15,12 @@ import { timeAgo } from "./PostCard";
 export function JamRoom() {
   const room = useRoom();
   const toast = useToast();
-  const [connected, setConnected] = useState(false);
-  const [glow, setGlow] = useState<string | null>(null);
+  // Rendered only after the room is open on the client, so localStorage is available.
+  const [connected, setConnected] = useState(() => isSpotifyConnected(room.userId ?? ""));
+  const [glowFor, setGlowFor] = useState<{ art: string; color: string } | null>(null);
   const [jamInput, setJamInput] = useState("");
   const track = room.spotify.track;
   const uid = room.userId ?? "";
-
-  useEffect(() => setConnected(isSpotifyConnected(uid)), [uid]);
 
   // While connected, publish what I'm playing (encrypted) so the card syncs to both phones.
   const poll = useCallback(async () => {
@@ -46,16 +45,18 @@ export function JamRoom() {
   }, [connected, poll]);
 
   // Album-art colour glow.
+  const art = track?.albumArt ?? null;
+  const glow = art && glowFor?.art === art ? glowFor.color : null;
   useEffect(() => {
-    if (!track?.albumArt) return setGlow(null);
+    if (!art) return;
     let alive = true;
-    seedFromImageUrl(track.albumArt)
-      .then((c) => alive && setGlow(c))
-      .catch(() => alive && setGlow(null));
+    seedFromImageUrl(art)
+      .then((color) => alive && setGlowFor({ art, color }))
+      .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [track?.albumArt]);
+  }, [art]);
 
   async function saveJam() {
     const url = safeSpotifyUrl(jamInput);

@@ -21,11 +21,11 @@ export function BackchodiScreen() {
   // When the window opens, sealed drops become readable: refetch at that moment.
   useEffect(() => {
     if (!win || win.open) return;
-    const ms = win.opensAt.getTime() - Date.now();
+    const ms = win.opensAt.getTime() - now;
     if (ms > 2 ** 31 - 1) return;
     const t = setTimeout(() => void room.refresh(["room_posts"]), ms + 500);
     return () => clearTimeout(t);
-  }, [win?.opensAt.getTime(), win?.open, room]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [win?.opensAt.getTime(), win?.open, room]); // eslint-disable-line react-hooks/exhaustive-deps -- re-arm only when the window changes
 
   return (
     <>
@@ -179,6 +179,7 @@ function Links({ text }: { text: string }) {
 function Verdict() {
   const room = useRoom();
   const [editDares, setEditDares] = useState(false);
+  const [daresKey, setDaresKey] = useState(0);
   const closed = room.closedCycles;
   const last = closed[0];
   const me = room.userId ?? "";
@@ -199,7 +200,15 @@ function Verdict() {
     <>
       <SectionTitle
         action={
-          <Button size="sm" variant="text" icon="pencil" onClick={() => setEditDares(true)}>
+          <Button
+            size="sm"
+            variant="text"
+            icon="pencil"
+            onClick={() => {
+              setDaresKey((k) => k + 1);
+              setEditDares(true);
+            }}
+          >
             Dares
           </Button>
         }
@@ -290,7 +299,7 @@ function Verdict() {
           </div>
         </>
       )}
-      <DaresSheet open={editDares} onClose={() => setEditDares(false)} />
+      <DaresSheet key={daresKey} open={editDares} onClose={() => setEditDares(false)} />
     </>
   );
 }
@@ -307,11 +316,9 @@ function Stat({ label, value, sub }: { label: string; value: string; sub: string
 
 function DaresSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const room = useRoom();
-  const [list, setList] = useState<string[]>([]);
+  // Remounted (via key) each time it opens, so it starts from the current list.
+  const [list, setList] = useState<string[]>(() => room.config.dares);
   const [draft, setDraft] = useState("");
-  useEffect(() => {
-    if (open) setList(room.config.dares);
-  }, [open, room.config.dares]);
   return (
     <Sheet open={open} onClose={onClose} title="Dare wheel">
       <div className="space-y-3">

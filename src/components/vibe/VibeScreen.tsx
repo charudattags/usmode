@@ -58,8 +58,17 @@ export function VibeScreen() {
   const room = useRoom();
   const fx = useFx();
   const now = useNow(1000);
-  const [kissOpen, setKissOpen] = useState(false);
-  const [customOpen, setCustomOpen] = useState(false);
+  const [kissOpen, setKissOpenState] = useState(false);
+  const [customOpen, setCustomOpenState] = useState(false);
+  const [sheetKey, setSheetKey] = useState(0);
+  const setKissOpen = (v: boolean) => {
+    if (v) setSheetKey((k) => k + 1);
+    setKissOpenState(v);
+  };
+  const setCustomOpen = (v: boolean) => {
+    if (v) setSheetKey((k) => k + 1);
+    setCustomOpenState(v);
+  };
   const me = room.me;
   const partner = room.partner;
   if (!me) return null;
@@ -243,8 +252,8 @@ export function VibeScreen() {
         </>
       )}
 
-      <SendKissSheet open={kissOpen} onClose={() => setKissOpen(false)} />
-      <CustomizeSheet open={customOpen} onClose={() => setCustomOpen(false)} />
+      <SendKissSheet key={`kiss-${sheetKey}`} open={kissOpen} onClose={() => setKissOpen(false)} />
+      <CustomizeSheet key={`custom-${sheetKey}`} open={customOpen} onClose={() => setCustomOpen(false)} />
     </>
   );
 }

@@ -61,10 +61,10 @@ function readRoomParam(): RoomId | null {
 
 export function RoomsScreen() {
   const room = useRoom();
-  const [open, setOpenState] = useState<RoomId | null>(null);
+  // Only rendered on the client after the room is ready, so the URL is readable here.
+  const [open, setOpenState] = useState<RoomId | null>(readRoomParam);
 
   useEffect(() => {
-    setOpenState(readRoomParam());
     const onPop = () => setOpenState(readRoomParam());
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);

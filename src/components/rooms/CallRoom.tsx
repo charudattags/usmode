@@ -6,7 +6,7 @@
  * floating reactions over the private broadcast channel.
  */
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatClock, pomodoroPhase } from "@/engine/time";
 import { sounds, vibrate } from "@/lib/device";
 import { cleanPhone } from "@/state/config";
@@ -87,17 +87,17 @@ function CoWork() {
   const started = r?.cowork_started_at ? new Date(r.cowork_started_at) : null;
   const cfg = { focusMin: r?.cowork_focus_min ?? 25, breakMin: r?.cowork_break_min ?? 5 };
   const phase = started && now ? pomodoroPhase(started, new Date(now), cfg) : null;
-  const [lastPhase, setLastPhase] = useState<string | null>(null);
+  const lastPhase = useRef<string | null>(null);
+  const phaseKey = phase ? `${phase.round}-${phase.phase}` : null;
 
   useEffect(() => {
-    if (!phase) return;
-    const key = `${phase.round}-${phase.phase}`;
-    if (lastPhase && key !== lastPhase) {
+    if (!phaseKey) return;
+    if (lastPhase.current && phaseKey !== lastPhase.current) {
       sounds.chime();
       vibrate([80, 60, 80]);
     }
-    setLastPhase(key);
-  }, [phase, lastPhase]);
+    lastPhase.current = phaseKey;
+  }, [phaseKey]);
 
   async function start(focusMin: number, breakMin: number) {
     await room.run(

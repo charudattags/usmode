@@ -23,10 +23,10 @@ const PENDING_JOIN = "usmode-pending-join";
 export function savePendingJoin(code: string, secret: string | null) {
   sessionStorage.setItem(PENDING_JOIN, JSON.stringify({ code, secret }));
 }
-function takePendingJoin(): { code: string; secret: string | null } | null {
+/** Read-only (safe to call twice under Strict Mode); cleared when the join runs. */
+function peekPendingJoin(): { code: string; secret: string | null } | null {
   const raw = sessionStorage.getItem(PENDING_JOIN);
   if (!raw) return null;
-  sessionStorage.removeItem(PENDING_JOIN);
   try {
     return JSON.parse(raw);
   } catch {
@@ -196,13 +196,15 @@ function PairStart() {
   const room = useRoom();
   const toast = useToast();
   const [code, setCode] = useState("");
-  const [busy, setBusy] = useState<null | "create" | "join">(null);
+  // An invite link opened before sign-in is waiting in this tab: join it straight away.
+  // (This screen only renders on the client, after boot, so sessionStorage is readable.)
+  const [pendingJoin] = useState(peekPendingJoin);
+  const [busy, setBusy] = useState<null | "create" | "join">(pendingJoin ? "join" : null);
   const [scanning, setScanning] = useState(false);
   const auto = useRef(false);
 
-  async function join(rawCode: string, secret: string | null) {
-    if (!room.userId) return;
-    setBusy("join");
+  async function doJoin(rawCode: string, secret: string | null) {
+    if (!room.userId) return setBusy(null);
     try {
       await joinRoom(room.backend, room.userId, rawCode, secret);
       room.reboot();
@@ -211,13 +213,17 @@ function PairStart() {
     }
     setBusy(null);
   }
+  function join(rawCode: string, secret: string | null) {
+    setBusy("join");
+    return doJoin(rawCode, secret);
+  }
 
   useEffect(() => {
-    if (auto.current) return;
+    if (auto.current || !pendingJoin) return;
     auto.current = true;
-    const p = takePendingJoin();
-    if (p) void join(p.code, p.secret);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    sessionStorage.removeItem(PENDING_JOIN);
+    void doJoin(pendingJoin.code, pendingJoin.secret);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, for the stashed invite
   }, []);
 
   async function create() {

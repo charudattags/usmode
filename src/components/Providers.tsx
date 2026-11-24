@@ -73,26 +73,19 @@ function Toaster() {
 /** Optional biometric / device-PIN lock (WebAuthn). Re-locks after 5 minutes in the background. */
 function AppLockGate({ children }: { children: ReactNode }) {
   const { userId } = useRoom();
-  const [cred, setCred] = useState<string | null>(null);
-  const [locked, setLocked] = useState(false);
-  const [checking, setChecking] = useState(true);
+  // Lock state is keyed by user, so switching accounts re-checks automatically.
+  const [lock, setLock] = useState<{ userId: string; cred: string | null; locked: boolean } | null>(null);
+  const current = lock && lock.userId === userId ? lock : null;
+  const cred = current?.cred ?? null;
+  const locked = current?.locked ?? false;
+  const checking = Boolean(userId) && !current;
+  const setLocked = (v: boolean) => setLock((l) => (l ? { ...l, locked: v } : l));
 
   useEffect(() => {
+    if (!userId) return;
     let alive = true;
-    setChecking(true);
-    if (!userId) {
-      setCred(null);
-      setLocked(false);
-      setChecking(false);
-      return;
-    }
-    void loadAppLockCredential(userId).then((c) => {
-      if (!alive) return;
-      setCred(c ?? null);
-      setLocked(Boolean(c));
-      setChecking(false);
-    });
-    const onLockChange = () => void loadAppLockCredential(userId).then((c) => alive && setCred(c ?? null));
+    void loadAppLockCredential(userId).then((c) => alive && setLock({ userId, cred: c ?? null, locked: Boolean(c) }));
+    const onLockChange = () => void loadAppLockCredential(userId).then((c) => alive && setLock((l) => ({ userId, cred: c ?? null, locked: l?.locked ?? false })));
     window.addEventListener("usmode-applock", onLockChange);
     return () => {
       alive = false;
@@ -105,7 +98,7 @@ function AppLockGate({ children }: { children: ReactNode }) {
     let hiddenAt = 0;
     const onVis = () => {
       if (document.visibilityState === "hidden") hiddenAt = Date.now();
-      else if (hiddenAt && Date.now() - hiddenAt > 5 * 60_000) setLocked(true);
+      else if (hiddenAt && Date.now() - hiddenAt > 5 * 60_000) setLock((l) => (l ? { ...l, locked: true } : l));
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);

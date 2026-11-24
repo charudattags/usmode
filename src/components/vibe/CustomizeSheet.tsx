@@ -14,28 +14,17 @@ export function CustomizeSheet({ open, onClose }: { open: boolean; onClose: () =
   const toast = useToast();
   const me = room.userId ?? "";
   const partner = room.partner?.user_id ?? "";
-  const [name, setName] = useState("");
-  const [mine, setMine] = useState("");
-  const [theirs, setTheirs] = useState("");
-  const [avatar, setAvatar] = useState("🦊");
-  const [phone, setPhone] = useState("");
-  const [time, setTime] = useState("21:00");
-  const [seed, setSeed] = useState("#d0436e");
-  const [variant, setVariant] = useState<SchemeVariant>("tonal");
+  // Remounted (via key) each time it opens, so fields start from the saved values.
+  const c0 = room.config;
+  const [name, setName] = useState(c0.roomName);
+  const [mine, setMine] = useState(c0.petNames[me] ?? "");
+  const [theirs, setTheirs] = useState(partner ? (c0.petNames[partner] ?? "") : "");
+  const [avatar, setAvatar] = useState(c0.avatars[me] ?? room.names.meAvatar);
+  const [phone, setPhone] = useState(c0.phones[me] ?? "");
+  const [time, setTime] = useState(room.room?.backchodi_start_time.slice(0, 5) ?? "21:00");
+  const [seed, setSeed] = useState(room.room?.theme_seed_hex ?? "#d0436e");
+  const [variant, setVariant] = useState<SchemeVariant>(c0.variant);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const c = room.config;
-    setName(c.roomName);
-    setMine(c.petNames[me] ?? "");
-    setTheirs(partner ? (c.petNames[partner] ?? "") : "");
-    setAvatar(c.avatars[me] ?? room.names.meAvatar);
-    setPhone(c.phones[me] ?? "");
-    setTime(room.room?.backchodi_start_time.slice(0, 5) ?? "21:00");
-    setSeed(room.room?.theme_seed_hex ?? "#d0436e");
-    setVariant(c.variant);
-  }, [open, room.config, room.room, room.names.meAvatar, me, partner]);
 
   // Live preview while picking a colour or style.
   useEffect(() => {

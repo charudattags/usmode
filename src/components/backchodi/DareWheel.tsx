@@ -36,8 +36,9 @@ export function DareWheel({ dares, canSpin, onResult }: { dares: string[]; canSp
       void finish(state.angle);
       return;
     }
-    let last = performance.now();
+    let last = -1;
     const loop = (t: number) => {
+      if (last < 0) last = t;
       const dt = Math.min(0.05, (t - last) / 1000);
       last = t;
       const r = stepWheel(state, dt, { segments: n });

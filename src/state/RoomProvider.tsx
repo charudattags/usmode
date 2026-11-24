@@ -183,24 +183,30 @@ export function RoomProvider({ children }: { children: ReactNode }) {
   const [handshake, setHandshake] = useState<HandshakeState | null>(null);
   const [data, setData] = useState<Data>(EMPTY);
   const dataRef = useRef(data);
-  dataRef.current = data;
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
   const broadcastListeners = useRef(new Set<(e: BroadcastEvent) => void>());
 
-  const reboot = useCallback(() => setBootId((n) => n + 1), []);
+  /** Reset to a clean slate and run the boot sequence again. */
+  const reboot = useCallback(() => {
+    setPhase("booting");
+    setData(EMPTY);
+    setKey(null);
+    setRoomId(null);
+    setHandshake(null);
+    setBootId((n) => n + 1);
+  }, []);
 
   /* ------------------------------ boot ------------------------------- */
   useEffect(() => {
     let cancelled = false;
     consumeDemoParam();
     const b = getBackend();
-    setBackend(b);
-    setModeState(currentMode());
-    setPhase("booting");
-    setData(EMPTY);
-    setKey(null);
-    setRoomId(null);
     (async () => {
       try {
+        setBackend(b);
+        setModeState(currentMode());
         const uid = await b.getUserId();
         if (cancelled) return;
         setUserId(uid);
@@ -225,12 +231,12 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         }
       }
     })();
-    const off = b.onAuthChange(() => !cancelled && setBootId((n) => n + 1));
+    const off = b.onAuthChange(() => !cancelled && reboot());
     return () => {
       cancelled = true;
       off();
     };
-  }, [bootId]);
+  }, [bootId, reboot]);
 
   /* ---------------------------- loaders ------------------------------ */
   const loadSlices = useCallback(
@@ -415,9 +421,10 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           if (!alive) return;
           setHandshake(st);
           const k = await loadRoomKey(userId, roomId);
+          // Creator who already holds the key can use the room as soon as the partner joined.
           if (k && (st.step === "done" || st.step === "waiting_for_confirm")) {
             setKey(k);
-            if (st.step === "done") setPhase("ready");
+            setPhase("ready");
           }
         } catch (e) {
           if (alive) setHandshake({ step: "failed", reason: friendlyError(e) });
@@ -433,12 +440,6 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       };
     }
   }, [backend, roomId, userId, phase, reboot]);
-
-  // Creator with key but partner hasn't opened the envelope yet: still show the
-  // room (they can start adding tasks) once the partner has joined.
-  useEffect(() => {
-    if (phase === "pairing" && key && handshake?.step === "waiting_for_confirm") setPhase("ready");
-  }, [phase, key, handshake]);
 
   useEffect(() => {
     if (phase !== "ready" || !backend || !roomId) return;

@@ -41,7 +41,9 @@ export async function beginSpotifyLogin(userId: string) {
     redirect_uri: redirectUri(),
     state,
   });
-  window.location.assign(`${AUTH_URL}?${params}`);
+  const url = new URL(AUTH_URL);
+  url.search = params.toString();
+  window.location.assign(url);
 }
 
 /** Called on /spotify-callback. Returns the user id the login was for. */

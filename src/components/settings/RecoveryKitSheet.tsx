@@ -43,8 +43,8 @@ export function RecoveryKitSheet({ open, onClose, onboarding }: { open: boolean;
     <Sheet open={open} onClose={onClose} title="Save a recovery kit">
       <div className="space-y-4">
         <p className="text-sm text-on-surface-variant">
-          {onboarding ? "You're paired! " : ""}Your room key lives only on your devices. If you lose this phone, a recovery kit is the only way back in. It's
-          encrypted with a passphrase you choose; we can't reset it.
+          {onboarding ? "You’re paired! " : ""}Your room key lives only on your devices. If you lose this phone, a recovery kit is the only way back in. It&apos;s
+          encrypted with a passphrase you choose; we can&apos;t reset it.
         </p>
         <TextField label={`Passphrase (${MIN_PASSPHRASE_LENGTH}+ characters)`} type="password" value={p1} onChange={setP1} />
         <TextField label="Repeat passphrase" type="password" value={p2} onChange={setP2} onEnter={() => ok && exportKit()} />
